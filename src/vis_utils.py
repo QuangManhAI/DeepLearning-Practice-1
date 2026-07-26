@@ -19,7 +19,6 @@ def explore_dataset(train_dataset, class_names, save_path='../outputs/images/sam
         ax.set_title(class_names[label], fontsize=9)
         ax.axis('off')
 
-    # Class distribution
     ax2 = plt.subplot(4, 5, (11, 15))
     labels_idx = [train_dataset[i][1] for i in range(len(train_dataset))]
     class_counts = [labels_idx.count(c) for c in range(len(class_names))]
@@ -32,7 +31,6 @@ def explore_dataset(train_dataset, class_names, save_path='../outputs/images/sam
         ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
                  str(count), ha='center', va='bottom', fontsize=7)
 
-    # Pixel distribution
     ax3 = plt.subplot(4, 5, (16, 20))
     sample_img = train_dataset[0][0].numpy()
     ax3.hist(sample_img.flatten(), bins=50, color='gray', edgecolor='black', alpha=0.7)
@@ -53,7 +51,6 @@ def explore_dataset(train_dataset, class_names, save_path='../outputs/images/sam
 
 
 def plot_losses(losses_dict, save_path='../outputs/plots/training_losses.png'):
-    """Plot loss curves for multiple models. losses_dict: {name: [losses]}"""
     fig, ax = plt.subplots(figsize=(8, 5))
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
     for idx, (name, losses) in enumerate(losses_dict.items()):
@@ -96,8 +93,6 @@ def plot_confusion_matrix(cm, class_names, title='Confusion Matrix',
 
 def plot_roc_curves(probas_dict, true_labels, class_names, n_cols=5,
                     save_path='../outputs/plots/roc_curves.png'):
-    """ROC curves per class comparing multiple models.
-    probas_dict: {model_name: array(N, C)}"""
     n_classes = len(class_names)
     n_rows = int(np.ceil(n_classes / n_cols))
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
@@ -131,7 +126,6 @@ def plot_roc_curves(probas_dict, true_labels, class_names, n_cols=5,
 
 def plot_pr_curves(probas_dict, true_labels, class_names, n_cols=5,
                    save_path='../outputs/plots/pr_curves.png'):
-    """Precision-Recall curves per class comparing multiple models."""
     n_classes = len(class_names)
     n_rows = int(np.ceil(n_classes / n_cols))
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
@@ -176,9 +170,53 @@ def plot_predictions(model, test_loader, class_names, device,
         ax = axes[i // 5, i % 5]
         ax.imshow(images[i].cpu().squeeze(), cmap='gray')
         color = 'green' if predicted[i] == labels[i] else 'red'
-        ax.set_title(f"Pred: {class_names[predicted[i]]}\nTrue: {class_names[labels[i]]}",
+        ax.set_title(f"Pred: {class_names[predicted[i]]}\\nTrue: {class_names[labels[i]]}",
                      fontsize=8, color=color)
         ax.axis('off')
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.show()
+
+
+def plot_misclassified(model, test_loader, class_names, device, max_samples=20,
+                       save_path='../outputs/plots/misclassified.png'):
+    model.eval()
+    misclassified = []
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs, 1)
+            mask = predicted != labels
+            for i in torch.where(mask)[0]:
+                misclassified.append((images[i].cpu(), labels[i].cpu(), predicted[i].cpu()))
+                if len(misclassified) >= max_samples:
+                    break
+            if len(misclassified) >= max_samples:
+                break
+
+    if not misclassified:
+        print('No misclassified samples found.')
+        return
+
+    n = len(misclassified)
+    cols = 5
+    rows = int(np.ceil(n / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
+    axes = axes.flatten()
+
+    for i in range(n):
+        img, true_label, pred_label = misclassified[i]
+        ax = axes[i]
+        ax.imshow(img.squeeze(), cmap='gray')
+        ax.set_title(f'True: {class_names[true_label]}\\nPred: {class_names[pred_label]}',
+                     fontsize=8, color='red')
+        ax.axis('off')
+
+    for i in range(n, len(axes)):
+        axes[i].axis('off')
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150)
+    plt.show()
+    print(f'Displayed {n} misclassified samples.')
