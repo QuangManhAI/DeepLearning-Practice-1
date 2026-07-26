@@ -20,8 +20,8 @@ def explore_dataset(train_dataset, class_names, save_path='../outputs/images/sam
         ax.axis('off')
 
     ax2 = plt.subplot(4, 5, (11, 15))
-    labels_idx = [train_dataset[i][1] for i in range(len(train_dataset))]
-    class_counts = [labels_idx.count(c) for c in range(len(class_names))]
+    all_labels = train_dataset.targets
+    class_counts = [(all_labels == c).sum().item() for c in range(len(class_names))]
     bars = ax2.bar(class_names, class_counts, color='skyblue', edgecolor='navy')
     ax2.set_title('Class Distribution (Train Set)', fontsize=10)
     ax2.set_ylabel('Count')

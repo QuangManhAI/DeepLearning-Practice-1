@@ -10,9 +10,21 @@ def get_fashionmnist_transforms():
     ])
 
 
-def load_fashionmnist(transform, root='../data'):
+def get_augmented_transforms():
+    return transforms.Compose([
+        transforms.RandomRotation(degrees=15, fill=0),
+        transforms.RandomAffine(degrees=0, translate=(0.08, 0.08), scale=(0.9, 1.1), fill=0),
+        transforms.ColorJitter(brightness=0.25, contrast=0.25),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,)),
+        transforms.RandomErasing(p=0.25, scale=(0.02, 0.15)),
+    ])
+
+
+def load_fashionmnist(transform, root='../data', train_transform=None):
     train_dataset = torchvision.datasets.FashionMNIST(
-        root=root, train=True, download=True, transform=transform
+        root=root, train=True, download=True,
+        transform=train_transform if train_transform else transform
     )
     test_dataset = torchvision.datasets.FashionMNIST(
         root=root, train=False, download=True, transform=transform
